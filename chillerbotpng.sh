@@ -98,7 +98,7 @@ check_for_new() {
 	done < "$NEW_URLS_FILE"
 	if [ "$got_new" = "1" ]
 	then
-		git add . && git commit -m "New url" && git push
+		git add urls.txt && git commit -m "New url" && git push
 	fi
 }
 
