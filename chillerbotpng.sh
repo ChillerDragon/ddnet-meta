@@ -4,6 +4,13 @@ KNOWN_URLS_FILE=urls.txt
 GH_URLS_FILE=tmp/gh_urls.txt
 NEW_URLS_FILE=tmp/new_urls.txt
 
+# https://github.com/teeworlds-community/mirror-bot/issues/5
+# https://github.com/cli/cli/blob/f4dff56057efabcfa38c25b3d5220065719d2b15/pkg/cmd/root/help_topic.go#L92-L96
+# use local github cli config
+# so this script never opens pullrequests under the wrong github user
+# if the linux user wide configuration changes
+export GH_CONFIG_DIR=./gh
+
 err() {
 	printf '[-][%s] %s\n' "$(date '+%F %H:%M')" "$1"
 }
