@@ -9,3 +9,4 @@ https://github.com/ddnet/ddnet/pull/9230
 https://github.com/ddnet/ddnet/pull/9442
 https://github.com/ddnet/ddnet/pull/9557
 https://github.com/ddnet/ddnet/pull/9593
+https://github.com/ddnet/ddnet/pull/9900
