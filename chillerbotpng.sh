@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 KNOWN_URLS_FILE=urls.txt
 GH_URLS_FILE=tmp/gh_urls.txt
 NEW_URLS_FILE=tmp/new_urls.txt
@@ -36,10 +38,11 @@ mkdir -p tmp
 :>"$NEW_URLS_FILE"
 [ ! -f "$KNOWN_URLS_FILE" ] && :>"$KNOWN_URLS_FILE"
 
-get_mod_urls() {
-	issue_or_pr="$1"
+get_urls_by_label() {
+	issue_or_pr="$1" # pr
+	ddnet_label="$2" # Mod-relevant change
 	issue_or_pr_upcased="$(printf '%s\n' "$issue_or_pr" | tr '[:lower:]' '[:upper:]')"
-	label="$issue_or_pr_upcased: Mod-relevant change"
+	label="$issue_or_pr_upcased: $ddnet_label"
 	gh "$issue_or_pr" list \
 		--repo ddnet/ddnet \
 		--label "$label" \
@@ -47,11 +50,11 @@ get_mod_urls() {
 		--json url |
 		jq '.[] | .url' -r
 }
-get_prs() {
-	get_mod_urls pr
+get_mod_prs() {
+       get_urls_by_label pr "Mod-relevant change"
 }
-get_issues() {
-	get_mod_urls issue
+get_mod_issues() {
+       get_urls_by_label issue "Mod-relevant change"
 }
 gh_comment_id() {
 	id="$1"
@@ -91,8 +94,8 @@ new_url() {
 }
 
 check_for_new() {
-	get_prs > "$GH_URLS_FILE"
-	get_issues >> "$GH_URLS_FILE"
+	get_mod_prs > "$GH_URLS_FILE"
+	get_mod_issues >> "$GH_URLS_FILE"
 	sort_file "$GH_URLS_FILE"
 	sort_file "$KNOWN_URLS_FILE"
 	comm -23 "$GH_URLS_FILE" "$KNOWN_URLS_FILE" > "$NEW_URLS_FILE"
