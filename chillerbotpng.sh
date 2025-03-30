@@ -2,7 +2,7 @@
 
 set -eu
 
-KNOWN_URLS_FILE=urls.txt
+KNOWN_URLS_DIR=urls
 GH_URLS_FILE=tmp/gh_urls.txt
 NEW_URLS_FILE=tmp/new_urls.txt
 
@@ -36,11 +36,34 @@ mkdir -p tmp
 
 :>"$GH_URLS_FILE"
 :>"$NEW_URLS_FILE"
-[ ! -f "$KNOWN_URLS_FILE" ] && :>"$KNOWN_URLS_FILE"
+mkdir -p "$KNOWN_URLS_DIR"
+[ ! -f "$KNOWN_URLS_DIR/mod.txt" ] && :>"$KNOWN_URLS_DIR/mod.txt"
+[ ! -f "$KNOWN_URLS_DIR/antibot.txt" ] && :>"$KNOWN_URLS_DIR/antibot.txt"
+
+assert() {
+	local got="$1"
+	shift
+	if [ "$1" != in ]
+	then
+		err "invalid assert operator $1"
+		exit 1
+	fi
+	shift
+	local all="$*"
+	while [ "$#" -gt 0 ]
+	do
+		[ "$1" = "$got" ] && return
+		shift
+	done
+	err "expected '$got' to be in: $all"
+	exit 1
+}
 
 get_urls_by_label() {
 	issue_or_pr="$1" # pr
+	assert "$issue_or_pr" in pr issue
 	ddnet_label="$2" # Mod-relevant change
+	assert "$ddnet_label" in "Mod-relevant change" "Antibot ABI change"
 	issue_or_pr_upcased="$(printf '%s\n' "$issue_or_pr" | tr '[:lower:]' '[:upper:]')"
 	label="$issue_or_pr_upcased: $ddnet_label"
 	gh "$issue_or_pr" list \
@@ -56,15 +79,24 @@ get_mod_prs() {
 get_mod_issues() {
        get_urls_by_label issue "Mod-relevant change"
 }
+get_antibot_prs() {
+       get_urls_by_label pr "Antibot ABI change"
+}
+get_antibot_issues() {
+       get_urls_by_label issue "Antibot ABI change"
+}
 gh_comment_id() {
 	id="$1"
 	text="$2"
 	gh issue comment "$id" --body "$text"
 }
-gh_comment_prs() {
+gh_comment_mod_prs() {
 	gh_comment_id 1 "$1"
 }
-gh_comment_issues() {
+gh_comment_mod_issues() {
+	gh_comment_id 2 "$1"
+}
+gh_comment_antibot_prs() {
 	gh_comment_id 2 "$1"
 }
 
@@ -81,40 +113,43 @@ sort_file() {
 	mv "$file_path".tmp "$file_path"
 }
 
-new_url() {
+new_mod_url() {
 	url="$1"
 	log "new url=$url"
-	printf '%s\n' "$url" >> "$KNOWN_URLS_FILE"
+	printf '%s\n' "$url" >> "$KNOWN_URLS_DIR/mod.txt"
 	if printf '%s\n' "$url" | grep 'issues'
 	then
-		gh_comment_issues "$url"
+		gh_comment_mod_issues "$url"
 	else
-		gh_comment_prs "$url"
+		gh_comment_mod_prs "$url"
 	fi
 }
 
 check_for_new() {
-	get_mod_prs > "$GH_URLS_FILE"
-	get_mod_issues >> "$GH_URLS_FILE"
+	local label="$1" # mod
+	assert "$label" in mod antibot
+	get_${label}_prs > "$GH_URLS_FILE"
+	get_${label}_issues >> "$GH_URLS_FILE"
 	sort_file "$GH_URLS_FILE"
-	sort_file "$KNOWN_URLS_FILE"
-	comm -23 "$GH_URLS_FILE" "$KNOWN_URLS_FILE" > "$NEW_URLS_FILE"
+	sort_file "$KNOWN_URLS_DIR/$label.txt"
+	comm -23 "$GH_URLS_FILE" "$KNOWN_URLS_DIR/$label.txt" > "$NEW_URLS_FILE"
 
 	got_new=0
 	while read -r new
 	do
-		new_url "$new"
+		new_${label}_url "$new"
 		got_new=1
 	done < "$NEW_URLS_FILE"
 	if [ "$got_new" = "1" ]
 	then
-		git add urls.txt && git commit -m "New url" && git push
+		git add "$KNOWN_URLS_DIR/$label.txt" && git commit -m "New url" && git push
 	fi
 }
 
 while :
 do
-	check_for_new
+	check_for_new mod
+	check_for_new antibot
 	log "sleeping for 5 minutes ..."
 	sleep 5m
 done
