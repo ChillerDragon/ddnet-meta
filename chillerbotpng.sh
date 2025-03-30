@@ -41,7 +41,7 @@ mkdir -p "$KNOWN_URLS_DIR"
 [ ! -f "$KNOWN_URLS_DIR/antibot.txt" ] && :>"$KNOWN_URLS_DIR/antibot.txt"
 
 assert() {
-	local got="$1"
+	got="$1"
 	shift
 	if [ "$1" != in ]
 	then
@@ -49,7 +49,7 @@ assert() {
 		exit 1
 	fi
 	shift
-	local all="$*"
+	all="$*"
 	while [ "$#" -gt 0 ]
 	do
 		[ "$1" = "$got" ] && return
@@ -65,10 +65,10 @@ get_urls_by_label() {
 	ddnet_label="$2" # Mod-relevant change
 	assert "$ddnet_label" in "Mod-relevant change" "Antibot ABI change"
 	issue_or_pr_upcased="$(printf '%s\n' "$issue_or_pr" | tr '[:lower:]' '[:upper:]')"
-	label="$issue_or_pr_upcased: $ddnet_label"
+	full_label="$issue_or_pr_upcased: $ddnet_label"
 	gh "$issue_or_pr" list \
 		--repo ddnet/ddnet \
-		--label "$label" \
+		--label "$full_label" \
 		--state all \
 		--json url |
 		jq '.[] | .url' -r
@@ -97,7 +97,7 @@ gh_comment_mod_issues() {
 	gh_comment_id 2 "$1"
 }
 gh_comment_antibot_prs() {
-	gh_comment_id 2 "$1"
+	gh_comment_id 4 "$1"
 }
 
 sort_file() {
@@ -115,7 +115,7 @@ sort_file() {
 
 new_mod_url() {
 	url="$1"
-	log "new url=$url"
+	log "new mod url=$url"
 	printf '%s\n' "$url" >> "$KNOWN_URLS_DIR/mod.txt"
 	if printf '%s\n' "$url" | grep 'issues'
 	then
@@ -125,9 +125,22 @@ new_mod_url() {
 	fi
 }
 
+new_antibot_url() {
+	url="$1"
+	log "new antibot url=$url"
+	printf '%s\n' "$url" >> "$KNOWN_URLS_DIR/antibot.txt"
+	if printf '%s\n' "$url" | grep 'issues'
+	then
+		err "antibot issue not supported $url"
+	else
+		gh_comment_antibot_prs "$url"
+	fi
+}
+
 check_for_new() {
-	local label="$1" # mod
+	label="$1" # mod
 	assert "$label" in mod antibot
+
 	get_${label}_prs > "$GH_URLS_FILE"
 	get_${label}_issues >> "$GH_URLS_FILE"
 	sort_file "$GH_URLS_FILE"
