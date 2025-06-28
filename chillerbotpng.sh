@@ -39,6 +39,7 @@ mkdir -p tmp
 mkdir -p "$KNOWN_URLS_DIR"
 [ ! -f "$KNOWN_URLS_DIR/mod.txt" ] && :>"$KNOWN_URLS_DIR/mod.txt"
 [ ! -f "$KNOWN_URLS_DIR/antibot.txt" ] && :>"$KNOWN_URLS_DIR/antibot.txt"
+[ ! -f "$KNOWN_URLS_DIR/config.txt" ] && :>"$KNOWN_URLS_DIR/config.txt"
 
 assert() {
 	got="$1"
@@ -63,7 +64,7 @@ get_urls_by_label() {
 	issue_or_pr="$1" # pr
 	assert "$issue_or_pr" in pr issue
 	ddnet_label="$2" # Mod-relevant change
-	assert "$ddnet_label" in "Mod-relevant change" "Antibot ABI change"
+	assert "$ddnet_label" in "Mod-relevant change" "Antibot ABI change" "Config-breaking change"
 	issue_or_pr_upcased="$(printf '%s\n' "$issue_or_pr" | tr '[:lower:]' '[:upper:]')"
 	full_label="$issue_or_pr_upcased: $ddnet_label"
 	gh "$issue_or_pr" list \
@@ -85,6 +86,9 @@ get_antibot_prs() {
 get_antibot_issues() {
        get_urls_by_label issue "Antibot ABI change"
 }
+get_config_issues() {
+       get_urls_by_label issue "Config-breaking change"
+}
 gh_comment_id() {
 	id="$1"
 	text="$2"
@@ -98,6 +102,9 @@ gh_comment_mod_issues() {
 }
 gh_comment_antibot_prs() {
 	gh_comment_id 4 "$1"
+}
+gh_comment_config_prs() {
+	gh_comment_id 5 "$1"
 }
 
 sort_file() {
@@ -137,6 +144,18 @@ new_antibot_url() {
 	fi
 }
 
+new_config_url() {
+	url="$1"
+	log "new config url=$url"
+	printf '%s\n' "$url" >> "$KNOWN_URLS_DIR/config.txt"
+	if printf '%s\n' "$url" | grep 'issues'
+	then
+		err "config issue not supported $url"
+	else
+		gh_comment_config_prs "$url"
+	fi
+}
+
 check_for_new() {
 	label="$1" # mod
 	assert "$label" in mod antibot
@@ -163,6 +182,7 @@ while :
 do
 	check_for_new mod
 	check_for_new antibot
+	check_for_new config
 	log "sleeping for 5 minutes ..."
 	sleep 5m
 done
