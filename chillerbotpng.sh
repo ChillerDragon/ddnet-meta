@@ -158,7 +158,7 @@ new_config_url() {
 
 check_for_new() {
 	label="$1" # mod
-	assert "$label" in mod antibot
+	assert "$label" in mod antibot config
 
 	get_${label}_prs > "$GH_URLS_FILE"
 	get_${label}_issues >> "$GH_URLS_FILE"
