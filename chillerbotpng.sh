@@ -86,6 +86,9 @@ get_antibot_prs() {
 get_antibot_issues() {
        get_urls_by_label issue "Antibot ABI change"
 }
+get_config_issues() {
+       get_urls_by_label issue "Config-breaking change"
+}
 get_config_prs() {
        get_urls_by_label pr "Config-breaking change"
 }
