@@ -1,1 +1,2 @@
 https://github.com/ddnet/ddnet/pull/10436
+https://github.com/ddnet/ddnet/pull/10711
